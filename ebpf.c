@@ -16,6 +16,7 @@
 
 #include "extfuse.skel.h"
 #include "ebpf.h"
+#include "fuse_opcode.h"
 
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(4,9,0)
 #define bpf_map_update_elem bpf_update_elem
@@ -75,6 +76,80 @@ ebpf_context_t* ebpf_init(char *filename)
 	if (err) {
 		ERROR("Failed to load and verify BPF skeleton\n");
 		goto err;
+	}
+
+	int handlers_map_fd = bpf_map__fd(skel->maps.handlers);
+	int prog_fd;
+	__u32 key;
+	
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_LOOKUP);
+	key = FUSE_LOOKUP;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_GETATTR);
+	key = FUSE_GETATTR;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_READ);
+	key = FUSE_READ;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_WRITE);
+	key = FUSE_WRITE;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_SETATTR);
+	key = FUSE_SETATTR;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_GETXATTR);
+	key = FUSE_GETXATTR;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_FLUSH);
+	key = FUSE_FLUSH;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_RENAME);
+	key = FUSE_RENAME;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_RMDIR);
+	key = FUSE_RMDIR;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
+	}
+
+	prog_fd = bpf_program__fd(skel->progs.bpf_func_FUSE_UNLINK);
+	key = FUSE_UNLINK;
+	if (bpf_map_update_elem(handlers_map_fd, &key, &prog_fd, BPF_ANY) != 0) {
+			perror("Failed to update handlers map");
+			goto err;
 	}
 
 	/* Attach tracepoints */

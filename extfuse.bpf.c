@@ -6,6 +6,7 @@
 #include <linux/limits.h>
 #include "stringify.h"
 #include <bpf/bpf_helpers.h>
+#include <bpf/bpf_core_read.h>
 
 #include "ebpf.h"
 #include "extfuse.h"
@@ -20,23 +21,18 @@
 	HELPERS
 *********************************************************************/
 
-//#define DEBUGNOW
+// #define DEBUGNOW
 
 /* #define HAVE_PASSTHRU */
 
 #ifndef DEBUGNOW
 #define PRINTK(fmt, ...)
 #else
-#define PRINTK(fmt, ...)                                               \
-                ({                                                      \
-                        char ____fmt[] = fmt;                           \
-                        bpf_trace_printk(____fmt, sizeof(____fmt),      \
-                                     ##__VA_ARGS__);                    \
-                })
+#define PRINTK bpf_printk
 #endif
 
 // #define HANDLER(F) SEC("extfuse/"__stringify(F)) int bpf_func_##F
-#define HANDLER(F) SEC("xdp") int bpf_func_##F
+#define HANDLER(F) SEC("sk_msg") int bpf_func_##F
 
 /*
 	BPF_MAP_TYPE_PERCPU_HASH: each CPU core gets its own hash-table.
@@ -87,14 +83,16 @@ struct {
 	__type(value, u32);
 } handlers SEC(".maps");
 
-int SEC("xdp") fuse_xdp_main_handler(void *ctx)
+int SEC("sk_msg") fuse_xdp_main_handler(void *ctx)
 {
     struct extfuse_req *args = (struct extfuse_req *)ctx;
-    int opcode = (int)args->in.h.opcode;
+	__u32 opcode = 0;
+    bpf_core_read(&opcode, sizeof(opcode), &args->in.h.opcode);
 
-    PRINTK("Opcode %d\n", opcode);
+	bpf_printk("in fuse_xdp_main_handler opcode: %d\n", opcode);
 
 	bpf_tail_call(ctx, &handlers, opcode);
+	bpf_printk("opcode not handled: %d\n", opcode);
 	return UPCALL;
 }
 
@@ -442,7 +440,7 @@ HANDLER(FUSE_SETATTR)(void *ctx)
 HANDLER(FUSE_GETXATTR)(void *ctx)
 {
 	PRINTK("GETXATTR: returning ENODATA\n");
-	return -ENODATA;
+	return UPCALL;
 }
 
 HANDLER(FUSE_FLUSH)(void *ctx)

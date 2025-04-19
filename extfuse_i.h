@@ -25,7 +25,7 @@ struct extfuse_in {
 
 	/** Array of arguments */
 	struct fuse_in_arg args[3];
-};
+}__attribute__((preserve_access_index));
 
 /** The request output */
 struct extfuse_out {
@@ -41,7 +41,7 @@ struct extfuse_out {
 
 	/** Array of arguments */
 	struct fuse_arg args[2];
-};
+}__attribute__((preserve_access_index));
 
 struct extfuse_req {
 	/** The request input */
@@ -49,7 +49,7 @@ struct extfuse_req {
 
 	/** The request output */
 	struct extfuse_out out;
-};
+}__attribute__((preserve_access_index));
 
 #define EXTFUSE_ERROR(x)	(x < 0 && x != -ENOSYS)
 #define EXTFUSE_UPCALL(x)	(x == -ENOSYS)
