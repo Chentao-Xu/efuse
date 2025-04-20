@@ -277,6 +277,9 @@ HANDLER(FUSE_LOOKUP)(void *ctx)
 			PRINTK("LOOKUP: No entry for node %s\n", key.name);
 		return UPCALL;
 	}
+	if ( entry->nlookup < 2 ) {
+		return UPCALL;
+	}
 
 	PRINTK("LOOKUP(0x%llx, %s): nlookup %lld\n",
 		key.nodeid, key.name, entry->nlookup);

@@ -4,6 +4,7 @@
 #define FUSE_SETATTR  	   4
 #define FUSE_READLINK 	   5
 #define FUSE_SYMLINK  	   6
+
 #define FUSE_MKNOD    	   8
 #define FUSE_MKDIR    	   9
 #define FUSE_UNLINK   	   10
@@ -15,6 +16,7 @@
 #define FUSE_WRITE    	   16
 #define FUSE_STATFS   	   17
 #define FUSE_RELEASE       18
+
 #define FUSE_FSYNC         20
 #define FUSE_SETXATTR      21
 #define FUSE_GETXATTR      22
