@@ -20590,7 +20590,15 @@ enum bpf_func_id {
 	BPF_FUNC_cgrp_storage_delete = 211,
 	BPF_FUNC_extfuse_read_args = 212,
 	BPF_FUNC_extfuse_write_args = 213,
-	__BPF_FUNC_MAX_ID = 214,
+	FBPF_FUNC_helper_memcpy = 214,
+	BPF_FUNC_malloc = 215,
+	BPF_FUNC_free = 216,
+	BPF_FUNC_mem_read = 217,
+	BPF_FUNC_mem_write = 218,
+	BPF_FUNC_memcmp = 219,
+	BPF_FUNC_memset = 220,
+	BPF_FUNC_extfuse_read_passthrough = 221,
+	__BPF_FUNC_MAX_ID = 222,
 };
 
 struct bpf_func_proto {
@@ -87703,6 +87711,13 @@ enum {
 	IN_PARAM_2_VALUE = 9,
 	OUT_PARAM_0 = 10,
 	OUT_PARAM_1 = 11,
+	READ_PASSTHROUGH = 12,
+};
+
+struct read_passthrough_in {
+	uint64_t fh;    // file handle
+	uint64_t offset; // offset to read from
+	uint64_t size;   // size of data to read
 };
 
 struct extfuse_data {
@@ -87730,6 +87745,15 @@ struct extfuse_req {
 typedef u64 (*btf_bpf_extfuse_read_args)(void *, u32, void *, size_t);
 
 typedef u64 (*btf_bpf_extfuse_write_args)(void *, u32, const void *, u32);
+
+typedef u64 (*btf_bpf_malloc)(size_t);
+typedef u64 (*btf_bpf_free)(void *);
+typedef u64 (*btf_bpf_mem_read)(void *, void *, off_t, size_t, size_t);
+typedef u64 (*btf_bpf_mem_write)(void *, void *, off_t, size_t, size_t);
+typedef u64 (*btf_sbpf_memcmp)(void *, void *, size_t);
+typedef u64 (*btf_sbpf_memset)(void *, int, size_t);
+
+typedef u64 (*btf_bpf_extfuse_read_passthrough)(void *, u64, u64, u64);
 
 struct compat_ipc_kludge {
 	compat_uptr_t msgp;

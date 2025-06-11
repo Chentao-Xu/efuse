@@ -16,10 +16,25 @@
 #include "ebpf_lookup.h"
 #include "ebpf_attr.h"
 #include "ebpf_create.h"
+#include "ebpf_read.h"
+
+#define __BPF_TRACING__ 1
 
 /********************************************************************
 	HELPERS
 *********************************************************************/
+static int (*bpf_helper_memcpy)(void *dst, void *src, size_t len) = (void *)214;
+static void *(*bpf_malloc)(size_t size) = (void *)215;
+static int (*bpf_free)(void *pt) = (void *)216;
+static int (*bpf_mem_read)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)217;
+static int (*bpf_mem_write)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)218;
+static int (*sbpf_memcmp)(void *dst, void *src, size_t len) = (void *)219;
+static void *(*sbpf_memset)(void *dst, int ch, size_t len) = (void *)220;
+
+static int (*bpf_extfuse_read_passthrough)(void *dst, uint64_t file_handle, uint64_t offset, uint64_t size) = (void *)221;
+// static int (*bpf_extfuse_read_passthrough)(void *dst, u64 file_handle, u64 offset, u64 size) =
+//     (void *)BPF_FUNC_extfuse_read_passthrough;
+
 
 // #define DEBUGNOW
 
@@ -38,13 +53,6 @@
 	BPF_MAP_TYPE_PERCPU_HASH: each CPU core gets its own hash-table.
 	BPF_MAP_TYPE_LRU_PERCPU_HASH: all cores share one hash-table but have they own LRU structures of the table.
 */
-// struct bpf_map_def SEC("maps") entry_map = {
-// 	.type			= BPF_MAP_TYPE_HASH,	// simple hash list
-// 	.key_size		= sizeof(lookup_entry_key_t),
-// 	.value_size		= sizeof(lookup_entry_val_t),
-// 	.max_entries	= MAX_ENTRIES,
-// 	.map_flags		= BPF_F_NO_PREALLOC,
-// };
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__uint(max_entries, MAX_ENTRIES);
@@ -53,14 +61,6 @@ struct {
 	__uint(map_flags, BPF_F_NO_PREALLOC);
 } entry_map SEC(".maps");
 
-/* order of maps is important */
-// struct bpf_map_def SEC("maps") attr_map = {
-// 	.type			= BPF_MAP_TYPE_HASH,	// simple hash list
-// 	.key_size		= sizeof(lookup_attr_key_t),
-// 	.value_size		= sizeof(lookup_attr_val_t),
-// 	.max_entries	= MAX_ENTRIES,
-// 	.map_flags		= BPF_F_NO_PREALLOC,
-// };
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__uint(max_entries, MAX_ENTRIES);
@@ -69,13 +69,21 @@ struct {
 	__uint(map_flags, BPF_F_NO_PREALLOC);
 } attr_map SEC(".maps");
 
-/* BPF_MAP_TYPE_PROG_ARRAY must ALWAYS be the last one */
-// struct bpf_map_def SEC("maps") handlers = {
-//    .type = BPF_MAP_TYPE_PROG_ARRAY,
-//    .key_size = sizeof(u32),
-//    .value_size = sizeof(u32),
-//    .max_entries = FUSE_OPS_COUNT << 1,
-// };
+struct {
+	__uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, MAX_ENTRIES);
+    __type(key, read_data_key_t);
+    __type(value, read_data_value_t);
+	__uint(map_flags, BPF_F_NO_PREALLOC);
+} data_map SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 2);
+    __type(key, uint32_t);
+    __type(value, char[MAX_READ_SIZE]);
+} tmp_buf_map SEC(".maps");
+
 struct {
 	__uint(type, BPF_MAP_TYPE_PROG_ARRAY);
 	__uint(max_entries, FUSE_OPS_COUNT << 1);
@@ -173,74 +181,6 @@ static void create_node(struct lo_inode *new_node, struct lo_inode *parent, cons
 	new_node->next = parent->child;
 	parent->child = new_node;
     return;
-}
-
-HANDLER(FUSE_CREATE_ENTRY)(void *ctx)
-{
-#ifdef ENABLE_JFUSE_CREATE
-	bpf_printk("Enter FUSE_CREATE_ENTRY\n");
-	create_args_t *args = (create_args_t *)ctx;
-	args->inode_is_null = 0;
-	struct lo_inode *inode = &args->inode;
-	struct fuse_entry_param *e = &args->e;
-
-	int64_t res=0;
-
-	// res = lstat(cpath, &e->attr);
-
-	if (res) {
-		// ERROR("[%d] \t %s(%s) lstat(%s) failed: %s\n",
-		// 	gettid(), op, name, cpath, strerror(errno));
-		// fuse_reply_err(req, errno);
-		bpf_printk("lstat failed, err: %d\n", res);
-		return -1;
-	} else {
-		// inode = lookup_child_by_name_locked(pinode, name);
-    	if (args->inode_is_null)
-			// acquire_node_locked(inode);
-			inode->nlookup++;
-    	else
-			// inode = create_node_locked(pinode, name);
-			create_node(inode, &args->pinode, args->name, args->namelen);
-		if (!inode) {
-			// ERROR("[%d] \t %s(%s) node creation failed: %s\n",
-			// 		gettid(), op, name, strerror(errno));
-			// pthread_mutex_unlock(&lo_data->mutex);
-			// if (time)
-			// 	fuse_reply_err(req, ENOMEM);
-			bpf_printk("node creation failed, err: %d\n", res);
-			return -1;
-		}
-
-		// INFO("[%d] \t %s new node %s id: %p\n",
-		// 		gettid(), op, cpath, inode);
-
-		inode->ino = e->attr.st_ino;
-		inode->dev = e->attr.st_dev;
-
-		e->attr_timeout = args->attr_timeout;
-		e->entry_timeout = args->entry_timeout;
-
-		/* store this for mapping (debugging) */
-		e->ino = inode->lo_ino;
-
-		// res = lookup_fetch(get_lo_data(req)->ebpf_ctxt, inode->pino,
-		// 		inode->name);
-		// if (res && !errno) {
-		// 	INFO("[%d] \t Fetched %s nlookup: %ld inode->nlookup: %ld\n",
-		// 		gettid(), res < 0 ? "stale" : "", res, inode->nlookup);
-		// 	if (res < 0)
-		// 		res = -res;
-		// 	inode->nlookup = res + 1;
-		// }
-		// res = lookup_insert(get_lo_data(req)->ebpf_ctxt, inode->pino,
-		// 		inode->name, inode->nlookup, e);
-		// if (res)
-		// 	ERROR("[%d] \t %s new node %s id: %p: %s\n",
-		// 		gettid(), op, cpath, inode, strerror(errno));
-	}
-#endif
-	return RETURN;
 }
 
 HANDLER(FUSE_LOOKUP)(void *ctx)
@@ -367,8 +307,17 @@ HANDLER(FUSE_GETATTR)(void *ctx)
 
 HANDLER(FUSE_READ)(void *ctx)
 {
+	int ret;
+    struct fuse_read_in readin;
+	u32 pid = bpf_get_current_pid_tgid() >> 32;
+	
+	bpf_printk("entering FUSE_READ handler, pid: %d\n", pid);
+	ret = bpf_extfuse_read_args(ctx, IN_PARAM_0_VALUE, &readin, sizeof(readin));
+	if (ret < 0)
+        return UPCALL;
+
 	lookup_attr_key_t key = {0};
-	int ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "READ", &key);
+	ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "READ", &key);
 	if (ret < 0)
 		return UPCALL;
 
@@ -379,27 +328,54 @@ HANDLER(FUSE_READ)(void *ctx)
 
 #ifndef HAVE_PASSTHRU
 	if (attr->stale & FATTR_ATIME)
-			return UPCALL;
+		return UPCALL;
 #endif
 
 	/* mark as stale to prevent future references to cached attrs */
-	__sync_fetch_and_add(&attr->stale, FATTR_ATIME);									
+	// 这条代码每次读完一遍都标记stale，为了提升性能可以直接注释掉了，不知道会有什么问题
+	// __sync_fetch_and_add(&attr->stale, FATTR_ATIME);									
 																			
 	/* delete to prevent future cached attrs */
-	//bpf_map_delete_elem(&attr_map, &key.nodeid);
+	// bpf_map_delete_elem(&attr_map, &key.nodeid);
 	PRINTK("READ: marked stale attr for node 0x%llx\n", key.nodeid);
+	
+	read_data_key_t data_key = {0};
+	uint64_t file_handle = readin.fh;
+	uint64_t offset = readin.offset;
+	uint32_t size = readin.size;
+
+	bpf_printk("READ: file_handle: %d offset: %llu size: %d\n",
+			file_handle, offset, size);
+
+	// 直通passthrough部分
+	// 调用 read_passthrough，直接读入磁盘数据到 OUT_PARAM_0 buffer
+	struct read_passthrough_in passthrough_in = {
+		.fh = file_handle,
+		.offset = offset,
+		.size = size
+	};
+	ret = bpf_extfuse_write_args(ctx, READ_PASSTHROUGH, &passthrough_in, sizeof(passthrough_in));
+	if (ret < 0) {
+		bpf_printk("READ: read_passthrough failed: %d\n", ret);
+		return UPCALL;
+	}
+
+	// 成功读取，直接返回 RETURN，表示不需要用户态处理
+	bpf_printk("READ: read_passthrough success, read %d bytes\n", ret);
 
 #ifdef HAVE_PASSTHRU
-	return PASSTHRU;
+	return RETURN;
 #else
-	return UPCALL;
+	return RETURN;
 #endif
 }
 
 HANDLER(FUSE_WRITE)(void *ctx)
 {
+	int ret;
+	
 	lookup_attr_key_t key = {0};
-	int ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "WRITE", &key);
+	ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "WRITE", &key);
 	if (ret < 0)
 		return UPCALL;
 

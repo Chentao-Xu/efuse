@@ -216,7 +216,18 @@ void ebpf_fini(ebpf_context_t *con)
 struct bpf_map* ebpf_get_map(ebpf_context_t *context, int idx)
 {
 	struct extfuse_bpf *skel = context->skel;
-	return idx == 0 ? skel->maps.entry_map : skel->maps.attr_map;
+	switch (idx) {
+		case 0:
+			return skel->maps.entry_map;
+		case 1:
+			return skel->maps.attr_map;
+		case 2:
+			return skel->maps.data_map;
+		case 3:
+			return skel->maps.tmp_buf_map;
+		default:
+			return skel->maps.data_map;
+	}
 }
 
 int ebpf_data_next(ebpf_context_t *context, void *key, size_t key_sz, void *next, int idx)
@@ -254,14 +265,15 @@ int ebpf_data_delete(ebpf_context_t *context, void *key, size_t key_sz, int idx)
 
 struct bpf_program* ebpf_get_handler(ebpf_context_t *context, int handler_id)
 {
-	struct extfuse_bpf *skel = context->skel;
-	switch (handler_id) {
-		case 1:
-			return skel->progs.bpf_func_FUSE_CREATE_ENTRY;
-		// TODO: other handlers
-		default:
-			return NULL;
-	}
+	// struct extfuse_bpf *skel = context->skel;
+	// switch (handler_id) {
+	// 	case 1:
+	// 		return skel->progs.bpf_func_FUSE_CREATE_ENTRY;
+	// 	// TODO: other handlers
+	// 	default:
+	// 		return NULL;
+	// }
+	return NULL;
 }
 
 int ebpf_call_handler(ebpf_context_t *context, int handler_id, void *args, size_t args_sz)

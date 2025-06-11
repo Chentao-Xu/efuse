@@ -4770,4 +4770,13 @@ static long (*bpf_extfuse_read_args)(void *src, __u32 type, void *dst, unsigned 
  */
 static long (*bpf_extfuse_write_args)(void *dst, __u32 type, const void *src, __u32 size) = (void *) 213;
 
+static long (*bpf_helper_memcpy)(void *dst, void *src, size_t len) = (void *) 214;
+static long (*bpf_malloc)(size_t size) = (void *) 215;
+static long (*bpf_free)(void *pt) = (void *) 216;
+static long (*bpf_mem_read)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *) 217;
+static long (*bpf_mem_write)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *) 218;
+static long (*sbpf_memcmp)(void *dst, void *src, size_t len) = (void *) 219;
+static long (*sbpf_memset)(void *dst, int ch, size_t len) = (void *) 220;
+
+static long (*bpf_extfuse_read_passthrough)(void *dst, __u64 file_handle, __u64 offset, __u64 size) = (void *) 221;
 
