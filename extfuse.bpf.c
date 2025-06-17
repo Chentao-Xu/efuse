@@ -23,15 +23,15 @@
 /********************************************************************
 	HELPERS
 *********************************************************************/
-static int (*bpf_helper_memcpy)(void *dst, void *src, size_t len) = (void *)214;
-static void *(*bpf_malloc)(size_t size) = (void *)215;
-static int (*bpf_free)(void *pt) = (void *)216;
-static int (*bpf_mem_read)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)217;
-static int (*bpf_mem_write)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)218;
-static int (*sbpf_memcmp)(void *dst, void *src, size_t len) = (void *)219;
-static void *(*sbpf_memset)(void *dst, int ch, size_t len) = (void *)220;
+// static int (*bpf_helper_memcpy)(void *dst, void *src, size_t len) = (void *)214;
+// static void *(*bpf_malloc)(size_t size) = (void *)215;
+// static int (*bpf_free)(void *pt) = (void *)216;
+// static int (*bpf_mem_read)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)217;
+// static int (*bpf_mem_write)(void *dst, void *src, off_t offset, size_t size, size_t boundary) = (void *)218;
+// static int (*sbpf_memcmp)(void *dst, void *src, size_t len) = (void *)219;
+// static void *(*sbpf_memset)(void *dst, int ch, size_t len) = (void *)220;
 
-static int (*bpf_extfuse_read_passthrough)(void *dst, uint64_t file_handle, uint64_t offset, uint64_t size) = (void *)221;
+// static int (*bpf_extfuse_read_passthrough)(void *dst, uint64_t file_handle, uint64_t offset, uint64_t size) = (void *)221;
 // static int (*bpf_extfuse_read_passthrough)(void *dst, u64 file_handle, u64 offset, u64 size) =
 //     (void *)BPF_FUNC_extfuse_read_passthrough;
 
@@ -70,19 +70,19 @@ struct {
 } attr_map SEC(".maps");
 
 struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
+	__uint(type, BPF_MAP_TYPE_LRU_HASH);
     __uint(max_entries, MAX_ENTRIES);
     __type(key, read_data_key_t);
     __type(value, read_data_value_t);
-	__uint(map_flags, BPF_F_NO_PREALLOC);
-} data_map SEC(".maps");
+} read_data_map SEC(".maps");
 
 struct {
-    __uint(type, BPF_MAP_TYPE_ARRAY);
-    __uint(max_entries, 2);
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1);
     __type(key, uint32_t);
-    __type(value, char[MAX_READ_SIZE]);
-} tmp_buf_map SEC(".maps");
+    __type(value, read_stat_t);
+	__uint(map_flags, BPF_F_NO_PREALLOC);
+} read_stat_map SEC(".maps");
 
 struct {
 	__uint(type, BPF_MAP_TYPE_PROG_ARRAY);
@@ -305,6 +305,92 @@ HANDLER(FUSE_GETATTR)(void *ctx)
 	return RETURN;
 }
 
+// 封装的缓存函数
+static __always_inline
+int read_from_cache(void *ctx, uint64_t fh, uint64_t offset, uint32_t size)
+{
+    read_data_key_t data_key = {};
+    uint64_t copied = 0;
+    uint64_t aligned_offset = offset & ~(uint64_t)(DATA_MAX_BLOCK_SIZE - 1);
+    uint64_t end_offset = (offset + size + DATA_MAX_BLOCK_SIZE - 1) & ~(uint64_t)(DATA_MAX_BLOCK_SIZE - 1);
+    uint64_t off = aligned_offset;
+
+    for (int i = 0; i < MAX_LOOP_COUNT; i++) {
+        data_key.file_handle = fh;
+        data_key.offset = off;
+
+		bpf_printk("READ: data_key.file_handle: 0x%llx offset: %llu\n",
+			data_key.file_handle, data_key.offset);
+        read_data_value_t *data = bpf_map_lookup_elem(&read_data_map, &data_key);
+        if (!data) {
+            bpf_printk("READ: cache miss at offset %llu\n", off);
+            return -1;
+        }
+		bpf_printk("READ: cache hit for size: %u, is_last: %u\n",
+			 data->size, data->is_last);
+
+        uint64_t data_offset = (off == aligned_offset) ? (offset - aligned_offset) : 0;
+        if (data_offset >= data->size || data->size == 0) {
+			struct efuse_cache_in bpf_cache_in = {
+				.copied = copied,
+				.data_offset = data_offset,
+				.copy_len = 0,
+				.data = data
+			};
+			int ret = bpf_extfuse_write_args(ctx, READ_MAP_CACHE, &bpf_cache_in, sizeof(bpf_cache_in));
+			if (ret < 0)
+				return -1;
+			return ret;
+        }
+
+        uint32_t copy_len = data->size - data_offset;
+        if (copied + copy_len > size)
+            copy_len = size - copied;
+
+        if (copied + copy_len > size)
+            return -1;
+
+        struct efuse_cache_in bpf_cache_in = {
+            .copied = copied,
+            .data_offset = data_offset,
+            .copy_len = copy_len,
+            .data = data
+        };
+        int ret = bpf_extfuse_write_args(ctx, READ_MAP_CACHE, &bpf_cache_in, sizeof(bpf_cache_in));
+        if (ret < 0)
+            return -1;
+
+        copied += copy_len;
+
+        if (data->is_last || data->size < DATA_MAX_BLOCK_SIZE)
+            break;
+
+        off += DATA_MAX_BLOCK_SIZE;
+        if (off >= end_offset)
+            break;
+    }
+
+    return 0;
+}
+
+// 封装的直通函数
+static __always_inline
+int read_passthrough(void *ctx, uint64_t fh, uint64_t offset, uint32_t size)
+{
+    struct efuse_read_in bpf_read_in = {
+        .fh = fh,
+        .offset = offset,
+        .size = size
+    };
+    int ret = bpf_extfuse_write_args(ctx, READ_PASSTHROUGH, &bpf_read_in, sizeof(bpf_read_in));
+    if (ret < 0) {
+        bpf_printk("READ: passthrough failed: %d\n", ret);
+        return -1;
+    }
+    bpf_printk("READ: passthrough success, read %d bytes\n", ret);
+    return 0;
+}
+
 HANDLER(FUSE_READ)(void *ctx)
 {
 	int ret;
@@ -338,8 +424,7 @@ HANDLER(FUSE_READ)(void *ctx)
 	/* delete to prevent future cached attrs */
 	// bpf_map_delete_elem(&attr_map, &key.nodeid);
 	PRINTK("READ: marked stale attr for node 0x%llx\n", key.nodeid);
-	
-	read_data_key_t data_key = {0};
+
 	uint64_t file_handle = readin.fh;
 	uint64_t offset = readin.offset;
 	uint32_t size = readin.size;
@@ -347,33 +432,87 @@ HANDLER(FUSE_READ)(void *ctx)
 	bpf_printk("READ: file_handle: %d offset: %llu size: %d\n",
 			file_handle, offset, size);
 
-	// 直通passthrough部分
-	// 调用 read_passthrough，直接读入磁盘数据到 OUT_PARAM_0 buffer
-	struct read_passthrough_in passthrough_in = {
-		.fh = file_handle,
-		.offset = offset,
-		.size = size
-	};
-	ret = bpf_extfuse_write_args(ctx, READ_PASSTHROUGH, &passthrough_in, sizeof(passthrough_in));
-	if (ret < 0) {
-		bpf_printk("READ: read_passthrough failed: %d\n", ret);
-		return UPCALL;
+	// // 数据缓存部分
+	// if (read_from_cache(ctx, file_handle, offset, size) == 0)
+    //     return RETURN;
+
+	// // 直通部分
+	// if (read_passthrough(ctx, file_handle, offset, size) == 0)
+    //     return RETURN;
+
+	// 调度选择部分
+	u32 stat_key = 0;
+    read_stat_t *stat = bpf_map_lookup_elem(&read_stat_map, &stat_key);
+    if (!stat)
+        return UPCALL;
+
+	// 前 TEST_CNT 次：探测阶段
+	if (stat->total_cnt < TEST_CNT) {
+        __u64 t1 = bpf_ktime_get_ns();
+        int r1 = read_from_cache(ctx, file_handle, offset, size);
+        __u64 t2 = bpf_ktime_get_ns();
+        stat->cache_time_sum += (t2 - t1);
+        stat->cache_cnt++;
+
+        t1 = bpf_ktime_get_ns();
+        int r2 = read_passthrough(ctx, file_handle, offset, size);
+        t2 = bpf_ktime_get_ns();
+        stat->passthrough_time_sum += (t2 - t1);
+        stat->passthrough_cnt++;
+
+        stat->total_cnt++;
+
+        if (r1 == 0)
+            return RETURN;
+        if (r2 == 0)
+            return RETURN;
+        return UPCALL;
+    }
+
+	// 选择阶段
+    if (stat->total_cnt == TEST_CNT) {
+        __u64 avg_cache = stat->cache_time_sum / (stat->cache_cnt ?: 1);
+        __u64 avg_pt = stat->passthrough_time_sum / (stat->passthrough_cnt ?: 1);
+
+        stat->prefer_cache = avg_cache < avg_pt; // 1:缓存 0:直通
+        bpf_printk("FUSE_READ: prefer %s (avg_cache=%llu, avg_pt=%llu)\n",
+                   stat->prefer_cache ? "cache" : "passthrough", avg_cache, avg_pt);
+    }
+
+	// 后续轮内请求，使用选中的路径
+    stat->total_cnt++;
+
+    if (stat->prefer_cache) {
+        ret = read_from_cache(ctx, file_handle, offset, size);
+    } else {
+        ret = read_passthrough(ctx, file_handle, offset, size);
+    }
+
+	if (stat->total_cnt > ROUND_CNT) {
+		// 重置统计信息
+		stat->cache_time_sum = 0;
+        stat->passthrough_time_sum = 0;
+        stat->cache_cnt = 0;
+        stat->passthrough_cnt = 0;
+        stat->total_cnt = 0;
 	}
 
-	// 成功读取，直接返回 RETURN，表示不需要用户态处理
-	bpf_printk("READ: read_passthrough success, read %d bytes\n", ret);
+	if (ret == 0) {
+		return RETURN;
+	}
+	
 
 #ifdef HAVE_PASSTHRU
 	return RETURN;
 #else
-	return RETURN;
+	return UPCALL;
 #endif
 }
 
 HANDLER(FUSE_WRITE)(void *ctx)
 {
 	int ret;
-	
+
 	lookup_attr_key_t key = {0};
 	ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "WRITE", &key);
 	if (ret < 0)

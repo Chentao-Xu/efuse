@@ -87712,12 +87712,7 @@ enum {
 	OUT_PARAM_0 = 10,
 	OUT_PARAM_1 = 11,
 	READ_PASSTHROUGH = 12,
-};
-
-struct read_passthrough_in {
-	uint64_t fh;    // file handle
-	uint64_t offset; // offset to read from
-	uint64_t size;   // size of data to read
+	READ_MAP_CACHE = 13,
 };
 
 struct extfuse_data {

@@ -216,17 +216,26 @@ void ebpf_fini(ebpf_context_t *con)
 struct bpf_map* ebpf_get_map(ebpf_context_t *context, int idx)
 {
 	struct extfuse_bpf *skel = context->skel;
+	struct bpf_map *map;
 	switch (idx) {
 		case 0:
-			return skel->maps.entry_map;
+			map = skel->maps.entry_map;
+			return map;
+			// return skel->maps.entry_map;
 		case 1:
 			return skel->maps.attr_map;
 		case 2:
-			return skel->maps.data_map;
+			map = skel->maps.read_data_map;
+			// printf("[debug] read_data_map name: %s, key_size: %u, value_size: %u\n",
+			// bpf_map__name(map),
+			// bpf_map__key_size(map),
+			// bpf_map__value_size(map));
+			return map;
+			// return skel->maps.read_data_map;
 		case 3:
-			return skel->maps.tmp_buf_map;
+			return skel->maps.read_stat_map;
 		default:
-			return skel->maps.data_map;
+			return skel->maps.read_data_map;
 	}
 }
 
