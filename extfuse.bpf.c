@@ -451,14 +451,18 @@ HANDLER(FUSE_READ)(void *ctx)
         __u64 t1 = bpf_ktime_get_ns();
         int r1 = read_from_cache(ctx, file_handle, offset, size);
         __u64 t2 = bpf_ktime_get_ns();
-        stat->cache_time_sum += (t2 - t1);
-        stat->cache_cnt++;
+		if (r1 == 0) {
+			stat->cache_time_sum += (t2 - t1);
+			stat->cache_cnt++;
+		}
 
         t1 = bpf_ktime_get_ns();
         int r2 = read_passthrough(ctx, file_handle, offset, size);
         t2 = bpf_ktime_get_ns();
-        stat->passthrough_time_sum += (t2 - t1);
-        stat->passthrough_cnt++;
+		if (r2 == 0) {
+			stat->passthrough_time_sum += (t2 - t1);
+			stat->passthrough_cnt++;
+		}
 
         stat->total_cnt++;
 
@@ -471,12 +475,16 @@ HANDLER(FUSE_READ)(void *ctx)
 
 	// 选择阶段
     if (stat->total_cnt == TEST_CNT) {
-        __u64 avg_cache = stat->cache_time_sum / (stat->cache_cnt ?: 1);
-        __u64 avg_pt = stat->passthrough_time_sum / (stat->passthrough_cnt ?: 1);
+		if ( stat->cache_cnt != stat->passthrough_cnt ) {
+			stat->prefer_cache = stat->cache_cnt > stat->passthrough_cnt; // 1:缓存 0:直通
+		} else {
+			__u64 avg_cache = stat->cache_time_sum / (stat->cache_cnt ?: 1);
+			__u64 avg_pt = stat->passthrough_time_sum / (stat->passthrough_cnt ?: 1);
 
-        stat->prefer_cache = avg_cache < avg_pt; // 1:缓存 0:直通
-        bpf_printk("FUSE_READ: prefer %s (avg_cache=%llu, avg_pt=%llu)\n",
-                   stat->prefer_cache ? "cache" : "passthrough", avg_cache, avg_pt);
+			stat->prefer_cache = avg_cache < avg_pt; // 1:缓存 0:直通
+			bpf_printk("FUSE_READ: prefer %s (avg_cache=%llu, avg_pt=%llu)\n",
+					stat->prefer_cache ? "cache" : "passthrough", avg_cache, avg_pt);
+		}
     }
 
 	// 后续轮内请求，使用选中的路径
