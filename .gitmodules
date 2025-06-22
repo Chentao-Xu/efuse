@@ -10,3 +10,6 @@
 [submodule "StackFS"]
 	path = StackFS
 	url = https://github.com/Chentao-Xu/StackFS.git
+[submodule "libfuse"]
+	path = libfuse
+	url = https://github.com/Chentao-Xu/libfuse.git
