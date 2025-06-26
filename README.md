@@ -128,7 +128,7 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 ### 4.1 原始FUSE结构分析
 
-<img src="./images/1.fuse结构图.png" height = "50%" alt="1.fuse结构图" align=center/>
+<img src="./images/1.fuse结构图.png" height = "20%" alt="1.fuse结构图" align=center/>
 
 在原始 FUSE 架构中，在应用程序发出系统调用后，首先由内核中的 VFS (Virtual File Syatem) 捕获，并发送至 FUSE 内核驱动，将其放入待处理队列中。队列中的请求依次提交给用户态文件系统处理，将处理完的结果返回内核，最终交付给应用程序。
 
@@ -142,9 +142,9 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 ### 4.2 eFUSE架构设计
 
-<img src="./images/2.efuse结构图.png" height = "50%" alt="2.efuse结构图" align=center/>
+<img src="./images/2.efuse结构图.png" height = "20%" alt="2.efuse结构图" align=center/>
 
-<img src="./images/3.efuse单核iops.png" height = "80%" alt="3.efuse单核iops" align=center/>
+<img src="./images/12.大结构图.png" height = "80%" alt="12.大结构图" align=center/>
 
 上图展示了 eFuse 的整体架构和工作流程，在原始 FUSE 结构的基础上，增加了 eBPF 模块，并对 FUSE 内核驱动进行更改优化，设计 eFuse 内核驱动模块。其核心设计思想如下：
 
