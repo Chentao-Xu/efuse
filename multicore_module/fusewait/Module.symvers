@@ -1,0 +1,2 @@
+0x11cc59df	rfuse_abort_conn	/home/made/rfuse/driver/rfuse/fuse	EXPORT_SYMBOL_GPL	
+0xfd0663a6	rfuse_direct_io	/home/made/rfuse/driver/rfuse/fuse	EXPORT_SYMBOL_GPL	

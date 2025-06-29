@@ -1,0 +1,1 @@
+savedcmd_fs/fuse/built-in.a := rm -f fs/fuse/built-in.a;  printf "fs/fuse/%s " dev.o dir.o file.o inode.o control.o xattr.o acl.o readdir.o ioctl.o rfuse_dev.o rfuse_dir.o rfuse_inode.o rfuse_file.o rfuse_comp.o dax.o | xargs ar cDPrST fs/fuse/built-in.a

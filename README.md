@@ -35,7 +35,9 @@
 | **项目导师** | 郑昱笙 |
 | **校内导师** | 夏文、李诗逸 |
 
-eFuse 是一个结合 eBPF 技术的 FUSE 文件系统性能优化方案，实现在不改变 FUSE 架构和接口标准的前提下，通过 eBPF 技术实现 FUSE 请求的用户态绕过机制、负载监控和请求均衡机制，优化请求处理和调度管理，提升各个负载场景下 FUSE 的性能和可扩展性。
+  FUSE（Filesystem in Userspace）是目前广受欢迎的一个用户态文件系统框架，但FUSE在高频负载场景下受限于频繁的用户态/内核态切换和请求提交时的锁争用，性能表现不佳。
+
+  为此，我们提出eFuse，一个结合eBPF技术的FUSE性能优化方案。其中包括通过eBPF map实现文件元数据和文件内容在内核中的缓存，在内核eBPF程序中对FUSE请求快速处理，设计更为合理的内核请求队列结构。优化请求处理和调度管理，提升各个负载场景下FUSE的性能和可扩展性，初赛阶段性能提升约3倍。上述设计不改变原本FUSE的架构和接口标准，能够实现对现有FUSE的完全兼容。
 
 ## 二、项目概述
 
@@ -128,7 +130,7 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 ### 4.1 原始FUSE结构分析
 
-<img src="./images/1.fuse结构图.png" height = "20%" alt="1.fuse结构图" align=center/>
+![1.fuse结构图](./images/1.fuse结构图2.png)
 
 在原始 FUSE 架构中，在应用程序发出系统调用后，首先由内核中的 VFS (Virtual File Syatem) 捕获，并发送至 FUSE 内核驱动，将其放入待处理队列中。队列中的请求依次提交给用户态文件系统处理，将处理完的结果返回内核，最终交付给应用程序。
 
@@ -142,9 +144,9 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 ### 4.2 eFUSE架构设计
 
-<img src="./images/2.efuse结构图.png" height = "20%" alt="2.efuse结构图" align=center/>
+![2.efuse结构图](./images/2.efuse结构图.png)
 
-<img src="./images/12.大结构图.png" height = "80%" alt="12.大结构图" align=center/>
+![12.大结构图](./images/12.大结构图.png)
 
 上图展示了 eFuse 的整体架构和工作流程，在原始 FUSE 结构的基础上，增加了 eBPF 模块，并对 FUSE 内核驱动进行更改优化，设计 eFuse 内核驱动模块。其核心设计思想如下：
 
@@ -189,7 +191,7 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程如下图所示：
 
-<img src="./images/6.直通缓存模块.png" height = "80%" alt="6.直通缓存模块" align=center/>
+![6.直通缓存模块](./images/6.直通缓存模块.png)
 
 * **map 缓存路径**
   
@@ -233,7 +235,7 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
 
   定义了多种环形缓冲区结构，如 struct ring_buffer_1 用于普通请求队列（如挂起队列和完成队列）等，struct ring_buffer_2 用于中断队列，struct ring_buffer_3 用于遗忘队列，以及指向内核地址，用户地址的参数和请求指针（karg,kreq和uarg,ureq），分别用于内核空间和用户空间的访问。
 
-  <img src="./images/7.ringbuffer.png" height = "80%" alt="7.ringbuffer" align=center/>
+  ![7.ringbuffer](./images/7.ringbuffer.png)
 
 * **混合轮询机制**
 
@@ -245,7 +247,7 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
 
 eFuse 多核优化模块具体操作流程图如下：
 
-<img src="./images/8.多核模块流程图.png" height = "80%" alt="8.多核模块流程图" align=center/>
+![8.多核模块流程图](./images/8.多核模块流程图.png)
 
 #### 4.4.4性能对比提升
 
@@ -354,6 +356,7 @@ eFuse 多核优化模块具体操作流程图如下：
 │   └── tmp # 用于挂载和测试StackFS的临时目录
 │       └── to # 可挂载并实际操作的目标子目录
 ├── linux # 修改后的内核，加入eFUSE支持和相应修改
+├── multicore_module # 多核优化模块（未完成）
 ├── libfuse # FUSE库
 ├── fio_test # 性能测试结果
 ├── README.md
