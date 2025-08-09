@@ -208,20 +208,22 @@ HANDLER(FUSE_LOOKUP)(void *ctx)
 
 	//PRINTK("key name: %s nodeid: 0x%llx\n", key.name, key.nodeid);
 	
+	bpf_printk("LOOKUP: key name: %s nodeid: 0x%llx\n",
+		key.name, key.nodeid);
 	lookup_entry_val_t *entry = bpf_map_lookup_elem(&entry_map, &key);
 	if (!entry || entry->stale) {
 		if (entry && entry->stale)
-			PRINTK("LOOKUP: STALE key name: %s nodeid: 0x%llx\n",
+			bpf_printk("LOOKUP: STALE key name: %s nodeid: 0x%llx\n",
 				key.name, key.nodeid);
 		else
-			PRINTK("LOOKUP: No entry for node %s\n", key.name);
+			bpf_printk("LOOKUP: No entry for node %s\n", key.name);
 		return UPCALL;
 	}
 	if ( entry->nlookup < 2 ) {
 		return UPCALL;
 	}
 
-	PRINTK("LOOKUP(0x%llx, %s): nlookup %lld\n",
+	bpf_printk("LOOKUP(0x%llx, %s): nlookup %lld\n",
 		key.nodeid, key.name, entry->nlookup);
 
 	/* prepare output */
@@ -236,14 +238,14 @@ HANDLER(FUSE_LOOKUP)(void *ctx)
 		lookup_attr_val_t *attr = bpf_map_lookup_elem(&attr_map, &nodeid);
 		if (!attr || attr->stale) {
 			if (attr && attr->stale)
-				PRINTK("LOOKUP: STALE attr for node: 0x%llx\n", nodeid);
+				bpf_printk("LOOKUP: STALE attr for node: 0x%llx\n", nodeid);
 			else {
-				PRINTK("LOOKUP: No attr for node 0x%llx\n", nodeid);
+				bpf_printk("LOOKUP: No attr for node 0x%llx\n", nodeid);
 				return UPCALL;
 			}
 		}
 
-		PRINTK("LOOKUP nodeid 0x%llx attr ino: 0x%llx\n",
+		bpf_printk("LOOKUP nodeid 0x%llx attr ino: 0x%llx\n",
 				entry->nodeid, attr->out.attr.ino);
 
 		create_lookup_entry(&out, entry, &attr->out);
@@ -267,7 +269,7 @@ HANDLER(FUSE_GETATTR)(void *ctx)
 	int ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "GETATTR", &key);
 	if (ret < 0)
 		return UPCALL;
-
+	
 	/* get cached attr value */
 	lookup_attr_val_t *attr = bpf_map_lookup_elem(&attr_map, &key);
 	if (!attr) {
@@ -399,22 +401,27 @@ HANDLER(FUSE_READ)(void *ctx)
 	
 	bpf_printk("entering FUSE_READ handler, pid: %d\n", pid);
 	ret = bpf_extfuse_read_args(ctx, IN_PARAM_0_VALUE, &readin, sizeof(readin));
-	if (ret < 0)
+	if (ret < 0) {
         return UPCALL;
+	}
 
 	lookup_attr_key_t key = {0};
 	ret = gen_attr_key(ctx, IN_PARAM_0_VALUE, "READ", &key);
-	if (ret < 0)
+	if (ret < 0) {
 		return UPCALL;
+	}
 
 	/* get cached attr value */
+	bpf_printk("READ: looking up attr for node 0x%llx\n", key.nodeid);
 	lookup_attr_val_t *attr = bpf_map_lookup_elem(&attr_map, &key);
-	if (!attr)
+	if (!attr) {
 		return UPCALL;
+	}
 
 #ifndef HAVE_PASSTHRU
-	if (attr->stale & FATTR_ATIME)
+	if (attr->stale & FATTR_ATIME) {
 		return UPCALL;
+	}
 #endif
 
 	/* mark as stale to prevent future references to cached attrs */
@@ -443,33 +450,35 @@ HANDLER(FUSE_READ)(void *ctx)
 	// 调度选择部分
 	u32 stat_key = 0;
     read_stat_t *stat = bpf_map_lookup_elem(&read_stat_map, &stat_key);
-    if (!stat)
+    if (!stat) {
         return UPCALL;
+	}
 
 	// 前 TEST_CNT 次：探测阶段
 	if (stat->total_cnt < TEST_CNT) {
         __u64 t1 = bpf_ktime_get_ns();
-        int r1 = read_from_cache(ctx, file_handle, offset, size);
-        __u64 t2 = bpf_ktime_get_ns();
-		if (r1 == 0) {
-			stat->cache_time_sum += (t2 - t1);
-			stat->cache_cnt++;
-		}
-
-        t1 = bpf_ktime_get_ns();
         int r2 = read_passthrough(ctx, file_handle, offset, size);
-        t2 = bpf_ktime_get_ns();
+        __u64 t2 = bpf_ktime_get_ns();
+		bpf_printk("FUSE_READ: read_passthrough took %llu ns\n", t2 - t1);
 		if (r2 == 0) {
 			stat->passthrough_time_sum += (t2 - t1);
 			stat->passthrough_cnt++;
 		}
 
+		t1 = bpf_ktime_get_ns();
+        int r1 = read_from_cache(ctx, file_handle, offset, size);
+        t2 = bpf_ktime_get_ns();
+		bpf_printk("FUSE_READ: read_from_cache took %llu ns\n", t2 - t1);
+		if (r1 == 0) {
+			stat->cache_time_sum += (t2 - t1);
+			stat->cache_cnt++;
+		}
+
         stat->total_cnt++;
 
-        if (r1 == 0)
+        if (r1 == 0 || r2 == 0) {
             return RETURN;
-        if (r2 == 0)
-            return RETURN;
+		}
         return UPCALL;
     }
 
