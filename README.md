@@ -40,7 +40,7 @@
 
   FUSE（Filesystem in Userspace）是目前广受欢迎的一个用户态文件系统框架，但FUSE在高频负载场景下受限于频繁的用户态/内核态切换和请求提交时的锁争用，性能表现不佳。
 
-  为此，我们提出eFuse，一个结合eBPF技术的FUSE性能优化方案，尝试在FUSE工作流程中的各个环节着手优化。其中包括**通过eBPF map实现文件元数据和文件内容在内核中的缓存**，**在内核eBPF程序中对FUSE请求快速处理**，**设计更为合理的内核请求队列结构**，**优化请求处理和调度管理**，**IO堆栈智能调度**。提升各个负载场景下FUSE的性能和可扩展性，相比原始FUSE，**IOPS和吞吐量等读写性能提升约3~5倍**，**请求的排队时延显著降低**。
+  为此，我们提出eFuse，一个结合eBPF技术的FUSE性能优化方案，尝试在FUSE工作流程中的各个环节着手优化。其中包括 通过eBPF map实现文件元数据和文件内容在内核中的缓存，在内核eBPF程序中对FUSE请求快速处理，设计更为合理的内核请求队列结构，优化请求处理和调度管理，IO堆栈智能调度。提升各个负载场景下FUSE的性能和可扩展性，**相比原始FUSE，IOPS和吞吐量等读写性能提升约3~5倍**，**在大部分负载场景下读写性能能够超过内核态文件系统 EXT4**，**请求的排队时延显著降低**。
   
   上述设计和功能实现不改变原本FUSE的架构和接口标准，**能够实现对现有FUSE的完全兼容**，**适配所有的基于FUSE实现的用户态文件系统**，简单易用。同时由于eBPF的可编程性，用户可以在不更改内核代码的情况下自定义各个FUSE请求对应的eBPF程序处理逻辑，**具有良好的扩展性和灵活性**。
 
@@ -276,16 +276,16 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
   定义了多种环形缓冲区结构，如 struct ring_buffer_1 用于普通请求队列（如挂起队列和完成队列）等，struct ring_buffer_2 用于中断队列，struct ring_buffer_3 用于遗忘队列，以及指向内核地址，用户地址的参数和请求指针（karg,kreq和uarg,ureq），分别用于内核空间和用户空间的访问。
 
   <div style="text-align: center;">
-  <img src="./images/7.ringbuffer.png" width="70%" height="70%">
+  <img src="./images/7.ringbuffer.png" width="50%" height="50%">
   </div>
   <div style="text-align: center;">
-  <img src="./images/15.动态缓冲区.png" width="60%" height="60%">
+  <img src="./images/15.动态缓冲区.png" width="45%" height="45%">
   </div>
 
    动态缓冲区能够支持批量化处理，单个 readv可处理多个请求的大参数（如 FUSE_READDIR+ 目录项）。
 
   <div style="text-align: center;">
-  <img src="./images/16.批量处理.png" width="70%" height="70%">
+  <img src="./images/16.批量处理.png" width="50%" height="50%">
   </div>
 
 * **混合轮询机制**
@@ -303,7 +303,7 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
 eFuse 多核优化模块具体操作流程图如下：
 
 <div style="text-align: center;">
-<img src="./images/8.多核模块流程图.png" width="55%" height="55%">
+<img src="./images/8.多核模块流程图.png" width="50%" height="50%">
 </div>
 
 
@@ -320,7 +320,7 @@ eFuse 多核优化模块具体操作流程图如下：
 ### 4.5 负载均衡
 
 <div style="text-align: center;">
-<img src="./images/17.负载均衡.png" width="70%" height="70%">
+<img src="./images/17.负载均衡.png" width="55%" height="55%">
 </div>
 
 原生fuse线程>16时吞吐量停滞主要原因为单队列锁争用。负载均衡机制主要针对​​突发性异步请求​​（如预读、写回）可能导致单个环形通道过载的问题而设计，通过动态分配请求到不同通道来提升整体吞吐量。**避免单点瓶颈​，零拷贝迁移，请求迁移仅传递​​头部缓冲区索引​​，无需复制数据**。
