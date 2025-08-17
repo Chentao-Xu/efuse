@@ -24,7 +24,7 @@
 #define bpf_map_delete_elem bpf_delete_elem
 #endif
 
-//#define DEBUG
+#define DEBUG 
 
 #ifdef DEBUG
 #define DBG(fmt, ...)   fprintf(stdout, fmt, ##__VA_ARGS__)
@@ -70,7 +70,7 @@ ebpf_context_t* ebpf_init(char *filename)
 		ERROR("Failed to open and load BPF skeleton\n");
 		goto err;
 	}
-
+	bpf_program__set_type(skel->progs.fuse_xdp_main_handler, BPF_PROG_TYPE_SK_MSG);
 	/* Load & verify BPF programs */
 	err = extfuse_bpf__load(skel);
 	if (err) {

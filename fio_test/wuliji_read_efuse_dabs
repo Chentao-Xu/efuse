@@ -1,0 +1,30 @@
+wuliji_read_efuse_dabs: (g=0): rw=read, bs=(R) 2048KiB-2048KiB, (W) 2048KiB-2048KiB, (T) 2048KiB-2048KiB, ioengine=libaio, iodepth=256
+...
+fio-3.28
+Starting 8 processes
+
+wuliji_read_efuse_dabs: (groupid=0, jobs=8): err= 0: pid=3058: Sat Aug 16 17:30:47 2025
+  read: IOPS=123, BW=246MiB/s (258MB/s)(14.4GiB/60055msec)
+    slat (msec): min=47, max=124, avg=64.94, stdev=19.00
+    clat (usec): min=4, max=21150k, avg=13195330.84, stdev=4382545.19
+     lat (msec): min=54, max=21258, avg=13260.28, stdev=4389.75
+    clat percentiles (msec):
+     |  1.00th=[  514],  5.00th=[ 2635], 10.00th=[ 5403], 20.00th=[10805],
+     | 30.00th=[14697], 40.00th=[14832], 50.00th=[14832], 60.00th=[14832],
+     | 70.00th=[14966], 80.00th=[14966], 90.00th=[16040], 95.00th=[17113],
+     | 99.00th=[17113], 99.50th=[17113], 99.90th=[17113], 99.95th=[17113],
+     | 99.99th=[17113]
+   bw (  KiB/s): min=196550, max=307200, per=100.00%, avg=281181.61, stdev=2874.94, samples=616
+   iops        : min=   95, max=  150, avg=136.49, stdev= 1.42, samples=616
+  lat (usec)   : 10=0.07%, 20=0.04%
+  lat (msec)   : 100=0.11%, 250=0.32%, 500=0.43%, 750=0.54%, 1000=0.43%
+  lat (msec)   : 2000=1.87%, >=2000=96.19%
+  cpu          : usr=0.05%, sys=2.39%, ctx=7586, majf=1, minf=1048703
+  IO depths    : 1=0.1%, 2=0.2%, 4=0.4%, 8=0.9%, 16=1.7%, 32=3.5%, >=64=93.2%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=99.9%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.1%
+     issued rwts: total=7392,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=256
+
+Run status group 0 (all jobs):
+   READ: bw=246MiB/s (258MB/s), 246MiB/s-246MiB/s (258MB/s-258MB/s), io=14.4GiB (15.5GB), run=60055-60055msec

@@ -62,6 +62,8 @@ extern int extfuse_load_prog(struct fuse_conn *fc, int fd);
 extern void extfuse_unload_prog(struct fuse_conn *fc);
 extern int extfuse_request_send(struct fuse_conn *fc,
 		struct fuse_req *req);
+extern int extfuse_request_send2(struct fuse_conn *fc,
+		struct rfuse_req *req);
 #else
 
 #define EXTFUSE_FLAGS	0
@@ -78,6 +80,11 @@ static inline void extfuse_unload_prog(struct fuse_conn *fc)
 
 static inline int extfuse_request_send(struct fuse_conn *fc,
 		struct fuse_req *req)
+{
+	return -ENOSYS;
+}
+static inline int extfuse_request_send2(struct fuse_conn *fc,
+		struct rfuse_req *req)
 {
 	return -ENOSYS;
 }
