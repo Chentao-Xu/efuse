@@ -275,16 +275,14 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
 
   定义了多种环形缓冲区结构，如 struct ring_buffer_1 用于普通请求队列（如挂起队列和完成队列）等，struct ring_buffer_2 用于中断队列，struct ring_buffer_3 用于遗忘队列，以及指向内核地址，用户地址的参数和请求指针（karg,kreq和uarg,ureq），分别用于内核空间和用户空间的访问。
 
-  <div style="text-align: center;">
+  <div align=center>
   <img src="./images/7.ringbuffer.png" width="50%" height="50%">
-  </div>
-  <div style="text-align: center;">
   <img src="./images/15.动态缓冲区.png" width="45%" height="45%">
   </div>
 
    动态缓冲区能够支持批量化处理，单个 readv可处理多个请求的大参数（如 FUSE_READDIR+ 目录项）。
 
-  <div style="text-align: center;">
+  <div align=center>
   <img src="./images/16.批量处理.png" width="50%" height="50%">
   </div>
 
