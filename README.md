@@ -519,7 +519,7 @@ eFuse 多核优化模块具体操作流程图如下：
 
 [eFUSE决赛设计开发文档](./eFUSE决赛设计开发文档.pdf)
 
-[eFuse 初赛 PPT](./初赛ppt.pptx)
+[eFuse 决赛 PPT](./FastPoke决赛ppt-哈尔滨工业大学（深圳）.pptx)
 
 ## 七、快速启动和功能展示
 
@@ -554,6 +554,7 @@ eFuse 多核优化模块具体操作流程图如下：
 ├── eFUSE初赛设计开发文档.pdf
 ├── eFUSE决赛设计开发文档.pdf
 ├── 初赛ppt.pptx
+├── FastPoke决赛ppt-哈尔滨工业大学（深圳）.pptx
 ├── eFuse演示视频_决赛.mp4
 └── images
 ```
