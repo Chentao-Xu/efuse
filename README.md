@@ -143,9 +143,9 @@ eFuse 是一个尝试将 eBPF 深度集成到 FUSE 文件系统中的创新项�
 
 | **姓名** | **分工内容**  |
 | -------- | -------- |
-| 许辰涛 | 1. 调研现有 FUSE 优化方案 <br /> 2. eBPF 开发技术栈学习 <br /> 3. 项目仓库与依赖子仓库搭建 <br />4. ExtFUSE 的Linux 内核移植 <br />5. 将libfuse 适配eFUSE |
-| 冯可逸 | 1. 开发环境搭建 <br /> 2. eBPF 开发技术栈学习 <br /> 3. 使用 eBPF 实现 FUSE 请求绕过 <br /> 4. FUSE I/O 缓存/直通 实现 <br /> 5. 初赛阶段综合性测试 |
-| 赵胜杰 | 1. 理解 RFUSE 算法思想和代码架构 <br /> 2. 理解 ExtFUSE 算法思想和代码架构 <br /> 3. 复现 RFUSE 项目 <br /> 4. 在6.5.0 内核上修改内核FUSE模块 <br /> 5. 修改用户库 libfuse 整合 RFUE 和 ExtFUSE |
+| 许辰涛 | 1. 开发环境搭建 <br />2. 调研现有 FUSE 优化方案 <br /> 3. eBPF 开发技术栈学习 <br /> 4. 项目仓库与依赖子仓库搭建 <br />5. ExtFUSE 的Linux 内核移植 <br />6. 将libfuse 适配eFUSE <br />7. 整体优化方案设计 <br />8. 文档撰写 |
+| 冯可逸 | 1. 开发环境搭建 <br /> 2. eBPF 开发技术栈学习 <br /> 3. 使用 eBPF 实现 FUSE 请求绕过 <br /> 4. FUSE I/O 缓存/直通 实现 <br /> 5. CSD 存算一体设备仿真 <br />6. I/O 堆栈调度算法设计和实现 <br />7. 虚拟机和物理机综合测试 <br />8. 文档撰写 |
+| 赵胜杰 | 1. 理解 RFUSE 算法思想和代码架构 <br /> 2. 理解 ExtFUSE 算法思想和代码架构 <br /> 3. 复现 RFUSE 项目 <br /> 4. 在6.5.0 内核上修改内核FUSE模块 <br /> 5. 修改用户库 libfuse 整合 RFUE 和 ExtFUSE <br />6. eFuse 多核优化模块实现 <br />7. 实现内核中多核优化模块对 eBPF 的适配 <br />8. 文档撰写 |
 
 ### 3.4 项目详细推进情况
 
