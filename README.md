@@ -229,7 +229,7 @@ eFuse 核心设计思想如下：
 
 FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程如下图所示：
 
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/6.直通缓存模块.png" width="70%" height="70%">
 </div>
 
@@ -300,7 +300,7 @@ FUSE I/O 请求相关用户态绕过模块的具体设计架构和工作流程�
 
 eFuse 多核优化模块具体操作流程图如下：
 
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/8.多核模块流程图.png" width="50%" height="50%">
 </div>
 
@@ -317,7 +317,7 @@ eFuse 多核优化模块具体操作流程图如下：
 
 ### 4.5 负载均衡
 
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/17.负载均衡.png" width="55%" height="55%">
 </div>
 
@@ -370,7 +370,7 @@ eFuse 多核优化模块具体操作流程图如下：
 
 #### 4.6.3 具体实现
 
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/14.IO堆栈.png" width="30%" height="30%">
 </div>
 
@@ -419,7 +419,7 @@ eFuse 多核优化模块具体操作流程图如下：
 
 
 #### 5.1.3 测试结果
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/决赛测试结果图1.png" width="60%" height="60%">
 <img src="./images/决赛测试结果图2.png" width="60%" height="60%">
 <img src="./images/决赛测试结果图3.png" width="60%" height="60%">
@@ -485,7 +485,7 @@ eFuse 多核优化模块具体操作流程图如下：
 
 部分测试结果图由于数据跨度较大，纵坐标采用对数刻度。
 
-<div style="text-align: center;">
+<div align=center>
 <img src="./images/决赛测试结果图5-2.png" width="60%" height="60%">
 <img src="./images/决赛测试结果图6-2.png" width="60%" height="60%">
 <img src="./images/决赛测试结果图7-2.png" width="60%" height="60%">
