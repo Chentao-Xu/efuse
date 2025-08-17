@@ -18,7 +18,8 @@
   - [4.2 eFuse架构设计](#42-eFuse架构设计)
   - [4.3 用户态文件系统绕过模块](#43-用户态文件系统绕过模块)
   - [4.4 多核优化模块](#44-多核优化模块)
-  - [4.5 设备/内核路径调度模块](#45-设备内核路径调度模块)
+  - [4.5 负载均衡](#45-负载均衡)
+  - [4.6 设备/内核路径调度模块](#46-设备内核路径调度模块)
 - [五、性能测试与评估](#五性能测试与评估)
   - [5.1 虚拟机初步测试](#51-虚拟机初步测试)
   - [5.2 物理机综合测试](#52-物理机综合测试)
@@ -526,9 +527,9 @@ eFuse 多核优化模块具体操作流程图如下：
 
 ## 六、项目开发文档和演示PPT
 
-[eFUSE初赛设计开发文档](./eFUSE初赛设计开发文档.pdf)
+[eFUSE决赛设计开发文档](./eFUSE决赛设计开发文档.pdf)
 
-[eFuse PPT](./eFuse.pptx)
+[eFuse 初赛 PPT](./初赛ppt.pptx)
 
 ## 七、快速启动和功能展示
 
@@ -561,11 +562,13 @@ eFuse 多核优化模块具体操作流程图如下：
 ├── README.md
 ├── doc # 比赛过程中的记录文件
 ├── eFUSE初赛设计开发文档.pdf
-├── eFuse.pptx
-├── eFuse演示视频.mp4
+├── eFUSE决赛设计开发文档.pdf
+├── 初赛ppt.pptx
+├── eFuse演示视频_决赛.mp4
 └── images
 ```
 
 ## 九、致谢
 
-* 感谢 [libbpf](https://github.com/libbpf/libbpf)、[libfuse](https://github.com/libfuse/libfuse) 等优秀开源项目
+* 感谢 [libbpf](https://github.com/libbpf/libbpf)、[libfuse](https://github.com/libfuse/libfuse) 等优秀开发工具
+* 感谢 [ExtFUSE](https://github.com/extfuse/extfuse)、[JFUSE](https://gitlab.eduxiji.net/educg-group-26009-2210132/T202418123993127-2596)、[RFUSE](https://github.com/snu-csl/rfuse)、[lambda-io](https://github.com/thustorage/lambda-io) 等优秀开源项目
