@@ -377,7 +377,7 @@ int read_from_cache(void *ctx, uint64_t fh, uint64_t offset, uint32_t size)
 
 // 封装的直通函数
 static __always_inline
-int read_passthrough(void *ctx, uint64_t fh, uint64_t offset, uint32_t size)
+int read_passthrough(void *ctx, uint64_t fh, uint64_t offset, uint32_t size, uint32_t flag)
 {
     struct efuse_read_in bpf_read_in = {
         .fh = fh,
@@ -390,7 +390,7 @@ int read_passthrough(void *ctx, uint64_t fh, uint64_t offset, uint32_t size)
         return -1;
     }
     bpf_printk("READ: passthrough success, read %d bytes\n", ret);
-    return 0;
+    return flag;
 }
 
 HANDLER(FUSE_READ)(void *ctx)
@@ -457,7 +457,7 @@ HANDLER(FUSE_READ)(void *ctx)
 	// 前 TEST_CNT 次：探测阶段
 	if (stat->total_cnt < TEST_CNT) {
         __u64 t1 = bpf_ktime_get_ns();
-        int r2 = read_passthrough(ctx, file_handle, offset, size);
+        int r2 = read_passthrough(ctx, file_handle, offset, size,-1);
         __u64 t2 = bpf_ktime_get_ns();
 		bpf_printk("FUSE_READ: read_passthrough took %llu ns\n", t2 - t1);
 		if (r2 == 0) {
@@ -502,7 +502,7 @@ HANDLER(FUSE_READ)(void *ctx)
     if (stat->prefer_cache) {
         ret = read_from_cache(ctx, file_handle, offset, size);
     } else {
-        ret = read_passthrough(ctx, file_handle, offset, size);
+        ret = read_passthrough(ctx, file_handle, offset, size, 0);
     }
 
 	if (stat->total_cnt > ROUND_CNT) {
