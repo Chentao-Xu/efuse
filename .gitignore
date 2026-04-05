@@ -1,3 +1,5 @@
 .cache/
 .output/
+.codex
+AGENTS.md
 compile_commands.json
